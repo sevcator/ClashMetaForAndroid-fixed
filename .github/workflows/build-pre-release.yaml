@@ -8,6 +8,8 @@ on:
 jobs:
   BuildPreRelease:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -59,24 +61,35 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          touch signing.properties
-          echo keystore.password="$SIGNING_STORE_PASSWORD" > signing.properties
-          echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
-          echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
-            
+          if [[ -n "$SIGNING_STORE_PASSWORD" && -n "$SIGNING_KEY_ALIAS" && -n "$SIGNING_KEY_PASSWORD" ]] &&
+             keytool -list -keystore release.keystore -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" >/dev/null 2>&1; then
+            printf 'keystore.password=%s\nkey.alias=%s\nkey.password=%s\n' \
+              "$SIGNING_STORE_PASSWORD" "$SIGNING_KEY_ALIAS" "$SIGNING_KEY_PASSWORD" > signing.properties
+            echo 'RELEASE_SIGNED=true' >> "$GITHUB_ENV"
+          else
+            echo '::warning::Release signing secrets are unavailable or invalid; APK artifacts will use the debug certificate.'
+            echo 'RELEASE_SIGNED=false' >> "$GITHUB_ENV"
+          fi
 
       - name: Pre-release Build
-        if: success()
         run: ./gradlew --no-daemon app:assembleAlphaRelease
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CMFA Alpha Release APKs
+          path: app/build/outputs/apk/alpha/release/*.apk
 
       # Delete old Prerelease-alpha
       - uses: dev-drprasad/delete-tag-and-release@v1.1
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         with:
           tag_name: Prerelease-alpha
           github_token: ${{ secrets.GITHUB_TOKEN }}
           delete_release: true
 
       - name: Tag Repo
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         uses: richardsimko/update-tag@v3
         with:
           tag_name: Prerelease-alpha
@@ -85,7 +98,7 @@ jobs:
 
       - name: Upload Alpha
         uses: softprops/action-gh-release@v3
-        if: ${{  success() }}
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         with:
           tag_name: Prerelease-alpha
           files: app/build/outputs/apk/alpha/release/*
@@ -93,4 +106,5 @@ jobs:
           generate_release_notes: true
 
       - name: Release Changelog Builder
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         uses: mikepenz/release-changelog-builder-action@v6

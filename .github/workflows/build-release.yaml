@@ -10,6 +10,8 @@ on:
 jobs:
   BuildRelease:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -51,41 +53,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       
-      - name: Convert and set version env
-        id: process-version
-        run: |
-          VERSION_TAG=${{ inputs.release-tag }}
-          VERSION_TAG=${VERSION_TAG#v}                              # remove the 'v' prefix
-          IFS='.' read -ra VERSION_PARTS <<< "$VERSION_TAG"         # split into array
-          VERSION_CODE=$(printf "%1d%02d%03d" "${VERSION_PARTS[0]}" "${VERSION_PARTS[1]}" "${VERSION_PARTS[2]}")
-          
-          echo "versonName=$VERSION_TAG" >> $GITHUB_OUTPUT          # "1.2.3"
-          echo "versonCode=$VERSION_CODE" >> $GITHUB_OUTPUT         # "102003"
-      
-      # Re-write version in build.gradle.kts
-      - name: Re-write version
-        uses: Devofure/advance-android-version-actions@v1.5
-        with:
-          gradlePath: build.gradle.kts
-          versionCode: ${{ steps.process-version.outputs.versonCode }}
-          versionName: ${{ steps.process-version.outputs.versonName }}
-      
-      # If any change found, commit it and push
-      - name: Commit and push if changes
-        run: |
-          changes=$(git diff --name-only origin/main | wc -l)
-          if [ $changes -gt 0 ]
-          then
-            newVersionName=${{ steps.process-version.outputs.versonName }}
-            newVersionCode=${{ steps.process-version.outputs.versonCode }}
-            git config --global user.name 'GitHub Action'
-            git config --global user.email 'action@github.com'
-            git add build.gradle.kts
-            git commit -am "Bump version to $newVersionName ($newVersionCode)"
-            git tag "v$newVersionName"
-            git push --follow-tags
-          fi
-
       - name: Update CA
         run: |
           sudo apt-get update && sudo apt-get install ca-certificates
@@ -98,17 +65,27 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          touch signing.properties
-          echo keystore.password="$SIGNING_STORE_PASSWORD" > signing.properties
-          echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
-          echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
-            
+          if [[ -n "$SIGNING_STORE_PASSWORD" && -n "$SIGNING_KEY_ALIAS" && -n "$SIGNING_KEY_PASSWORD" ]] &&
+             keytool -list -keystore release.keystore -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" >/dev/null 2>&1; then
+            printf 'keystore.password=%s\nkey.alias=%s\nkey.password=%s\n' \
+              "$SIGNING_STORE_PASSWORD" "$SIGNING_KEY_ALIAS" "$SIGNING_KEY_PASSWORD" > signing.properties
+            echo 'RELEASE_SIGNED=true' >> "$GITHUB_ENV"
+          else
+            echo '::warning::Release signing secrets are unavailable or invalid; APK artifacts will use the debug certificate.'
+            echo 'RELEASE_SIGNED=false' >> "$GITHUB_ENV"
+          fi
 
       - name: Release Build
-        if: success()
         run: ./gradlew --no-daemon app:assembleMetaRelease
 
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CMFA Meta Release APKs
+          path: app/build/outputs/apk/meta/release/*.apk
+
       - name: Tag Repo
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         uses: richardsimko/update-tag@v3
         with:
           tag_name: ${{ inputs.release-tag }}
@@ -117,13 +94,14 @@ jobs:
 
       - name: Upload Release
         uses: softprops/action-gh-release@v3
-        if: ${{ success() }}
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         with:
           tag_name: ${{ inputs.release-tag }}
           files: app/build/outputs/apk/meta/release/*
           generate_release_notes: true
 
       - name: Release Changelog Builder
+        if: ${{ env.RELEASE_SIGNED == 'true' }}
         uses: mikepenz/release-changelog-builder-action@v6
         with:
           configurationJson: |
