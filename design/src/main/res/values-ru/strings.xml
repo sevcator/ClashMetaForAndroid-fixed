@@ -51,6 +51,9 @@
     <string name="name">Название</string>
     <string name="profile_name">Название профиля</string>
     <string name="profile_url">URL профиля</string>
+    <string name="subscription_user_agent">User-Agent подписки</string>
+    <string name="subscription_user_agent_hint">По умолчанию, если пусто</string>
+    <string name="subscription_user_agent_error">До 512 символов, без переноса строки</string>
     <string name="auto_update">Автообновление</string>
     <string name="auto_update_minutes">Автообновление (минут)</string>
 

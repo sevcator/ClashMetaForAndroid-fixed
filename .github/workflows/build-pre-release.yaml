@@ -15,6 +15,9 @@ jobs:
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
 
+      - name: Apply mihomo REALITY patch
+        run: git -C core/src/foss/golang/clash apply "$GITHUB_WORKSPACE/core/mihomo-reality.patch"
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -61,8 +64,6 @@ jobs:
           echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
           echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
             
-          echo "cat signing.properties"
-          cat signing.properties
 
       - name: Pre-release Build
         if: success()

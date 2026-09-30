@@ -138,6 +138,24 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         }
     }
 
+    fun inputUserAgent() {
+        if (profile.type != Profile.Type.Url) return
+
+        launch {
+            val userAgent = context.requestModelTextInput(
+                initial = profile.userAgent ?: "",
+                title = context.getText(R.string.subscription_user_agent),
+                hint = context.getText(R.string.subscription_user_agent_hint),
+                error = context.getText(R.string.subscription_user_agent_error),
+                validator = ValidatorUserAgent
+            ).ifBlank { null }
+
+            if (userAgent != profile.userAgent) {
+                profile = profile.copy(userAgent = userAgent)
+            }
+        }
+    }
+
     fun inputInterval() {
         launch {
             var minutes = TimeUnit.MILLISECONDS.toMinutes(profile.interval)

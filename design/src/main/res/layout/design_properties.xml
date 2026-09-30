@@ -91,6 +91,17 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:onClick="@{() -> self.inputUserAgent()}"
+                    app:enabled="@{profile.type == Type.Url}"
+                    app:icon="@drawable/ic_outline_inbox"
+                    app:placeholder="@string/subscription_user_agent_hint"
+                    app:text="@{profile.userAgent}"
+                    app:title="@string/subscription_user_agent" />
+
+                <com.github.kr328.clash.design.view.ActionTextField
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
                     android:onClick="@{() -> self.inputInterval()}"
                     app:enabled="@{profile.type != Type.File}"
                     app:icon="@drawable/ic_outline_update"

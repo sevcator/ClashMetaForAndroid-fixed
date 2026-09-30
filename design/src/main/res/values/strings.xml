@@ -57,6 +57,9 @@
     <string name="name">Name</string>
     <string name="profile_name">Profile Name</string>
     <string name="profile_url">Profile URL</string>
+    <string name="subscription_user_agent">Subscription User-Agent</string>
+    <string name="subscription_user_agent_hint">Default if empty</string>
+    <string name="subscription_user_agent_error">Up to 512 characters; no line breaks</string>
     <string name="auto_update">Auto Update</string>
     <string name="auto_update_minutes">Auto Update (Minutes)</string>
 

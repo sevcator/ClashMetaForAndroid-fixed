@@ -28,3 +28,7 @@ val ValidatorAutoUpdateInterval: Validator = {
 val ValidatorAgeSecretKey: Validator = {
     it.isEmpty() || Clash.veritySecretKeys(it)
 }
+
+val ValidatorUserAgent: Validator = {
+    it.length <= 512 && it.none { char -> char == '\r' || char == '\n' || char == '\u0000' }
+}
