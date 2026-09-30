@@ -136,6 +136,7 @@ object Clash {
     fun fetchAndValid(
         path: File,
         url: String,
+        userAgent: String?,
         force: Boolean,
         reportStatus: (FetchStatus) -> Unit
     ): CompletableDeferred<Unit> {
@@ -160,6 +161,7 @@ object Clash {
                 },
                 path.absolutePath,
                 url,
+                userAgent ?: "",
                 force
             )
         }

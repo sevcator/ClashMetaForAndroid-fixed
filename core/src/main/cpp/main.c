@@ -228,14 +228,16 @@ JNIEXPORT void JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeFetchAndValid(JNIEnv *env, jobject thiz,
                                                                     jobject callback,
                                                                     jstring path,
-                                                                    jstring url, jboolean force) {
+                                                                    jstring url, jstring userAgent,
+                                                                    jboolean force) {
     TRACE_METHOD();
 
     jobject _completable = new_global(callback);
     scoped_string _path = get_string(path);
     scoped_string _url = get_string(url);
+    scoped_string _userAgent = get_string(userAgent);
 
-    fetchAndValid(_completable, _path, _url, force);
+    fetchAndValid(_completable, _path, _url, _userAgent, force);
 }
 
 JNIEXPORT void JNICALL

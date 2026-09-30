@@ -12,6 +12,12 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
 
 val MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_1_2,
+    object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE imported ADD COLUMN userAgent TEXT")
+            database.execSQL("ALTER TABLE pending ADD COLUMN userAgent TEXT")
+        }
+    },
 )
 
 val LEGACY_MIGRATION = ::migrationFromLegacy
